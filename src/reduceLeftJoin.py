@@ -57,7 +57,7 @@ class ReduceLeftJoinEx(MRJob):
         bike_tuples = []
 
         for value in list(values):
-            relation = value[0]  # either 'OR' or 'DE'
+            relation = value[0]  # either 'BI' or 'WE'
             if relation == 'BI':  # orders data
                 rain = value[1][0]
                 temp = value[1][1]
@@ -68,15 +68,15 @@ class ReduceLeftJoinEx(MRJob):
                 name = value[1][2]
                 bike_tuples.append(stationID,lastUpdate,name)
             else:
-                raise ValueError('An unexpected join key was encountered.')
+                raise ValueError('An unexpected join key was encountered.',+relation)
             if len(bike_tuples) > 0:
                 for bike_values in order_tuples:
                     if len(weather_tuples) > 0:
                         count = len(detail_tuples)
                         total = sum(detail_tuples)
-                        output = [key] + [o for o in order_values] + [count, total]
+                        output = [key] + [o for o in bike_values] + [count, total]
                     else:
-                        output = [key] + [o for o in order_values] + ['null','null']
+                        output = [key] + [o for o in bike_values] + ['null','null']
                     yield None, output
         else:
             raise ValueError('An unexpected join type was encountered. This should not happen.')
