@@ -33,14 +33,15 @@ class ReduceLeftJoinEx(MRJob):
                 fields = line.split(',')
                 if fields[10][0]!="-": # Weather Dataset
                     date_for_merge = pd.to_datetime(dt.datetime.strptime(fields[0], "%d-%b-%Y %H:%M")).floor('H')
-                    #date_for_merge = date.dt.round('H')
-                    rain = fields[2]
-                    temp = fields[4] 
-                    dry = float(rain) > 0
-                    warm = float(temp) > 18
-                    value = (rain,temp,dry,warm)
-                    key = date_for_merge.strftime("%Y/%m/%d %H:%M")
-                    yield key, ('WE', value)
+                    if date_for_merge > dt.datetime.strptime('2020-01-01',"%Y-%m-%d"):
+                        #date_for_merge = date.dt.round('H')
+                        rain = fields[2]
+                        temp = fields[4] 
+                        dry = float(rain) > 0
+                        warm = float(temp) > 18
+                        value = (rain,temp,dry,warm)
+                        key = date_for_merge.strftime("%Y/%m/%d %H:%M")
+                        yield key, ('WE', value)
                 else: #fields[0][2] =="-": # Bike Dataset
                     stationID =     fields[0]
                     lastUpdated =   fields[2]
@@ -65,8 +66,8 @@ class ReduceLeftJoinEx(MRJob):
                     else:
                         dayType = 'Sunday'
                     #Returning Key and Value
-                    value = (stationID,name,bikeStands,availableBikes,address,lattitude,longitude,occupancy,full,empty,dayNumber,dayType)
                     key = date_for_merge.strftime("%Y/%m/%d %H:%M")
+                    value = (stationID,name,bikeStands,availableBikes,address,lattitude,longitude,occupancy,full,empty,dayNumber,dayType,key)
                     yield key, ('BI', value)
                 #else:
                     #raise ValueError('An input file does not contain the required number of fields.')
@@ -81,6 +82,7 @@ class ReduceLeftJoinEx(MRJob):
             relation = value[0]
             #print(type(relation))    # either 'BI' or 'WE'
             if relation == 'BI':  # orders data
+                date_for_merge  =   value[1][12]
                 stationID       =   value[1][0]
                 name            =   value[1][1]
                 #lastUpdate      =  value[1][1]
@@ -94,7 +96,7 @@ class ReduceLeftJoinEx(MRJob):
                 empty           =   value[1][9]
                 dayNumber       =   value[1][10]
                 dayType         =   value[1][11]
-                bike_tuples.append((stationID,name,bikeStands,availableBikes,address,lattitude,longitude,occupancy,full,empty,dayNumber,dayType))
+                bike_tuples.append((date_for_merge,stationID,name,bikeStands,availableBikes,address,lattitude,longitude,occupancy,full,empty,dayNumber,dayType))
                 #print("getting through the bikes")
                 #yield(key,(stationID,lastUpdate))
 
