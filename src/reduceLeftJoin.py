@@ -113,8 +113,9 @@ class ReduceLeftJoinEx(MRJob):
             #if (rain in locals()) and (stationID in locals()):
             if len(weather_tuples) > 0 and len(bike_tuples)>0:
                 for weather_tuple in weather_tuples:
-                    for bike_tuple in bike_tuples:
-                        yield key, (bike_tuple,weather_tuple)
+                    #for bike_tuple in bike_tuples:
+                    #keyList = (),key
+                    yield bike_tuples[-1] + weather_tuple
                 bike_tuples = []
             
             '''if len(bike_tuples) > 0:
