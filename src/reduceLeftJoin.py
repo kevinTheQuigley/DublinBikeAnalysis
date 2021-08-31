@@ -10,6 +10,7 @@ from mrjob.protocol import JSONValueProtocol
 #BIKE_HEADER = ('date_for_merge|STATION ID|LAST UPDATED|NAME|BIKE STANDS|AVAILABLE BIKE STANDS|AVAILABLE BIKES|STATUS|ADDRESS|LATITUDE|LONGITUDE|DATETIME|DATE|OCCUPANCY_PCT|FULL|EMPTY|DAY_NUMBER|DAY_TYPE|TIME_TYPE|HOUR|MONTH|CLUSTER_GROUP')
 WEATHER_HEADER=('date,ind,rain,ind,temp,ind,wetb,dewpt,vappr,rhum,msl')
 BIKE_HEADER = ('STATION ID,TIME,LAST UPDATED,NAME,BIKE STANDS,AVAILABLE BIKE STANDS,AVAILABLE BIKES,STATUS,ADDRESS,LATITUDE,LONGITUDE')
+WEATHER_DESCRIPTOR = ('msl:   -  Mean Sea Level Pressure (hPa)')
 
 class ReduceLeftJoinEx(MRJob):
 
@@ -29,7 +30,7 @@ class ReduceLeftJoinEx(MRJob):
     def mapper(self, _, line):
         line=line.strip()
         if line != BIKE_HEADER and line != WEATHER_HEADER:
-            if len(line)>=len(WEATHER_HEADER):
+            if len(line)>=(len(WEATHER_DESCRIPTOR)-5):
                 fields = line.split(',')
                 if fields[10][0]!="-": # Weather Dataset
                     date_for_merge = pd.to_datetime(dt.datetime.strptime(fields[0], "%d-%b-%Y %H:%M")).floor('H')
@@ -40,7 +41,8 @@ class ReduceLeftJoinEx(MRJob):
                         dry = float(rain) > 0
                         warm = float(temp) > 18
                         value = (rain,temp,dry,warm)
-                        key = date_for_merge.strftime("%Y/%m/%d %H:%M")
+                        #key = date_for_merge.strftime("%Y/%m/%d %H:%M")
+                        key = int(date_for_merge.strftime("%Y%m%d%H%M"))
                         yield key, ('WE', value)
                 else: #fields[0][2] =="-": # Bike Dataset
                     stationID =     fields[0]
@@ -66,8 +68,9 @@ class ReduceLeftJoinEx(MRJob):
                     else:
                         dayType = 'Sunday'
                     #Returning Key and Value
-                    key = date_for_merge.strftime("%Y/%m/%d %H:%M")
-                    value = (stationID,name,bikeStands,availableBikes,address,lattitude,longitude,occupancy,full,empty,dayNumber,dayType,key)
+                    key1 = date_for_merge.strftime("%Y/%m/%d %H:%M")
+                    key = int(date_for_merge.strftime("%Y%m%d%H%M"))
+                    value = (stationID,name,bikeStands,availableBikes,address,lattitude,longitude,occupancy,full,empty,dayNumber,dayType,key1)
                     yield key, ('BI', value)
                 #else:
                     #raise ValueError('An input file does not contain the required number of fields.')
@@ -75,7 +78,7 @@ class ReduceLeftJoinEx(MRJob):
     def reducer(self, key, values):
         total = 0
         count = 0
-
+        finishedStations =[]
         weather_tuples = []
         bike_tuples = []
         for value in list(values):
@@ -96,7 +99,9 @@ class ReduceLeftJoinEx(MRJob):
                 empty           =   value[1][9]
                 dayNumber       =   value[1][10]
                 dayType         =   value[1][11]
-                bike_tuples.append((date_for_merge,stationID,name,bikeStands,availableBikes,address,lattitude,longitude,occupancy,full,empty,dayNumber,dayType))
+                if stationID not in finishedStations:
+                    bike_tuples.append((date_for_merge,stationID,name,bikeStands,availableBikes,address,lattitude,longitude,occupancy,full,empty,dayNumber,dayType))
+                    finishedStations.append(stationID)
                 #print("getting through the bikes")
                 #yield(key,(stationID,lastUpdate))
 
@@ -111,11 +116,11 @@ class ReduceLeftJoinEx(MRJob):
                 raise ValueError('An unexpected join key was encountered.',+relation)
             #if len(bike_tuples) > 0:
             #if (rain in locals()) and (stationID in locals()):
-            if len(weather_tuples) > 0 and len(bike_tuples)>0:
+            if (len(weather_tuples) > 0 and len(bike_tuples)>0):
                 for weather_tuple in weather_tuples:
                     #for bike_tuple in bike_tuples:
                     #keyList = (),key
-                    yield bike_tuples[-1] + weather_tuple
+                    yield key,(bike_tuples[-1] + weather_tuple)
                 bike_tuples = []
             
             '''if len(bike_tuples) > 0:
