@@ -46,13 +46,13 @@ class ReduceLeftJoinEx(MRJob):
             i+=1
             date = value[0]
             name = value[1]
-            wet  = value[2]
+            wet  = int(value[2])
             totalBikeUse  = float(value[3])
             rain = float(value[4])
             stationID = int(value[6])
             totalBikeChange += abs(totalBikeUse)
             totalRain += rain
-            totalWet += int(wet)
+            totalWet = int(wet)
         avgBikeUse = totalBikeChange/i 
         value = (key,name,wet,avgBikeUse,totalRain/i,stationID,str(i))
         yield(key, value)

@@ -61,7 +61,7 @@ class ReduceLeftJoinEx(MRJob):
             wet  = value[4]
             warm = value[5]
             key  = value[7]
-            stationID = value[8]
+            stationID = int(value[8])
             availableBikes  = int(value[6])
             if  i  == 0:
                 bikeDelta = 0
