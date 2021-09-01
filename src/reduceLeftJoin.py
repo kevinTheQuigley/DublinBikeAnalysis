@@ -30,7 +30,7 @@ class ReduceLeftJoinEx(MRJob):
     def mapper(self, _, line):
         line=line.strip()
         if line != BIKE_HEADER and line != WEATHER_HEADER:
-            if len(line)>=(len(WEATHER_DESCRIPTOR)-5):
+            if len(line)>(len(WEATHER_DESCRIPTOR)+2):
                 fields = line.split(',')
                 if fields[10][0]!="-": # Weather Dataset
                     date_for_merge = pd.to_datetime(dt.datetime.strptime(fields[0], "%d-%b-%Y %H:%M")).floor('H')
@@ -38,9 +38,9 @@ class ReduceLeftJoinEx(MRJob):
                         #date_for_merge = date.dt.round('H')
                         rain = fields[2]
                         temp = fields[4] 
-                        dry = float(rain) > 0
-                        warm = float(temp) > 18
-                        value = (rain,temp,dry,warm)
+                        wet = int(float(rain) > 0)
+                        warm = int(float(temp) > 18)
+                        value = (rain,temp,wet,warm)
                         #key = date_for_merge.strftime("%Y/%m/%d %H:%M")
                         key = int(date_for_merge.strftime("%Y%m%d%H%M"))
                         yield key, ('WE', value)
@@ -108,9 +108,9 @@ class ReduceLeftJoinEx(MRJob):
             elif relation == 'WE':  # Weather Data
                 rain            = value[1][0]
                 temp            = value[1][1]
-                dry             = value[1][2]
+                wet             = value[1][2]
                 warm            = value[1][2]
-                weather_tuples.append((key, rain,temp,dry,warm))
+                weather_tuples.append((rain,temp,wet,warm))
                 #yield(key,(name,rain))
             else:
                 raise ValueError('An unexpected join key was encountered.',+relation)

@@ -13,19 +13,12 @@ class ReduceLeftJoinEx(MRJob):
 
     # Allow the job to receive an argument from the command line
     # This argument will be used to specify the type of join
-    def configure_args(self):
-        super(ReduceLeftJoinEx, self).configure_args()
-        self.add_passthru_arg(
-            '--join_type',
-            default = 'left_outer',
-            choices=['inner', 'left_outer','right_outer'],
-            help="The type of join"
-        )
 
     def mapper(self, _, line):
         line=line.strip()
         fields = line.split(',')
         date_for_merge = pd.to_datetime(dt.datetime.strptime(fields[0][2:16],"%Y/%m/%d %H:")).floor('h') #Had to change these due to space removal
+        date_for_value = date_for_merge.strftime("%Y/%m/%d")
         stationID   = fields[1][2:-1]
         stationName = fields[2][2:-1]
         bikeStands  = fields[3][2:-1]
@@ -43,7 +36,7 @@ class ReduceLeftJoinEx(MRJob):
         wet         = fields[15][1:] # These could be swapped <>
         warm        = fields[16][1:-1]
         hour        = date_for_merge.hour
-        value = (hour,rainfall,temp,stationName,wet,warm,availableBikes,date_for_merge)
+        value = (hour,rainfall,temp,stationName,wet,warm,availableBikes,date_for_value,stationID)
         key         = int(stationID) + 100*int(date_for_merge.strftime("%Y%m%d"))
         yield key, value
 
@@ -56,22 +49,31 @@ class ReduceLeftJoinEx(MRJob):
         bikeDelta = 0
         oldBikeAvailibility  = -1 
         totalWet = 0
+        totalTemp = 0
+        totalBikeChange = 0
+        i = 0
+        totalRain = 0
         for value in list(values):
             hour = value[0]
-            rain = value[1]
-            temp = value[2]
+            rain = float(value[1])
+            temp = float(value[2])
             name = value[3]
             wet  = value[4]
             warm = value[5]
             key  = value[7]
+            stationID = value[8]
             availableBikes  = int(value[6])
-            if oldBikeAvailability  != -1:
-                bikeDelta = oldBikeAvailability - availableBikes
-            else:
+            if  i  == 0:
                 bikeDelta = 0
-            totalBikeChange += bikeDelta
+            else:
+                bikeDelta = oldBikeAvailability - availableBikes
+            i += 1
+            totalBikeChange += abs(bikeDelta)
+            totalRain += rain
+            oldBikeAvailability = availableBikes
             totalWet += int(wet)
-        value = (name,totalWet,BikeDelta)
+            totalTemp += temp
+        value = (key,name,str(int(bool(totalWet))),totalBikeChange,totalRain,(totalTemp/i),warm,stationID,str(i))
         yield(key, value)
 
 
